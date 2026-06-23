@@ -1,0 +1,13 @@
+node_modules/
+dist/
+out/
+dist/
+.DS_Store
+*.log
+npm-debug.log*
+*.tsbuildinfo
+
+# Local secrets / settings (myMVP stores API keys here via electron-store)
+.env
+.env.local
+config.local.json
