@@ -3,10 +3,10 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { mymvpDevApiPlugin } from './scripts/vite-plugin-mymvp-api'
 
-/** Browser build for Netlify (playable link like Mind-and-Venture). */
+/** Browser build — default path for pauloventura.org/mymvp/ */
 export default defineConfig({
   root: resolve('src/renderer'),
-  base: '/',
+  base: process.env.MYMVP_BASE ?? '/mymvp/',
   resolve: {
     alias: {
       '@renderer': resolve('src/renderer/src')

@@ -1,6 +1,6 @@
 import type { DigestResponse } from '../../shared/types'
 import { scoutWebWide } from './scout-all'
-import { synthesizeFromWeb } from './synthesize'
+import { synthesizeFromWeb } from '../../shared/web/synthesize'
 
 /** Shared digest logic — used by Netlify, Vite dev server, and tests. */
 export async function handleDigest(question: string): Promise<DigestResponse> {

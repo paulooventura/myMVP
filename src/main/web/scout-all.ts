@@ -1,17 +1,9 @@
 import type { WebChannel, WebSnippet } from '../../shared/types'
+import { CHANNEL_LABELS } from '../../shared/web/constants'
 import { searchDuckDuckGo } from './search'
 
 const UA =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-
-const CHANNEL_LABELS: Record<WebChannel, string> = {
-  search: 'Search scout',
-  wiki: 'Wikipedia scout',
-  instant: 'Instant answer scout',
-  news: 'News scout',
-  video: 'Video scout',
-  discussion: 'Discussion scout'
-}
 
 /** Fan out to diverse web scouts — no API keys required. */
 export async function scoutWebWide(question: string): Promise<WebSnippet[]> {

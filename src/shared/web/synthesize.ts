@@ -1,20 +1,17 @@
-import type { InfluenceEntry, WebChannel, WebSnippet } from '../../shared/types'
-import { CHANNEL_LABELS } from './scout-all'
+import type { InfluenceEntry, WebChannel, WebSnippet } from '../types'
+import { CHANNEL_LABELS } from './constants'
 
 interface WebSynthesis {
   answer: string
   influence: InfluenceEntry[]
 }
 
-/**
- * myMVP's brain — cross-analyzes web scout intel into an intuitive answer.
- * No LLM API required.
- */
+/** myMVP's brain — cross-analyzes web scout intel into an intuitive answer. */
 export function synthesizeFromWeb(question: string, snippets: WebSnippet[]): WebSynthesis {
   if (snippets.length === 0) {
     return {
       answer:
-        "I GOT YOU — I sent web scouts everywhere I could, but came back empty-handed this round. Could be a network hiccup or the sources blocked the request. Try again in a moment, or add API scout keys in Settings for deeper intel.",
+        "I GOT YOU — I sent web scouts everywhere I could, but came back empty-handed this round. Could be a network hiccup or the sources blocked the request. Try again in a moment.",
       influence: [{ source: 'mvp', label: 'myMVP (the brain)', percent: 100 }]
     }
   }
@@ -33,7 +30,7 @@ export function synthesizeFromWeb(question: string, snippets: WebSnippet[]): Web
   if (lead.detail) lines.push('', lead.detail)
 
   if (points.length > 0) {
-    lines.push('', 'What stood out crossing search, wiki, news, video & discussion scouts:')
+    lines.push('', 'What stood out crossing the scouts:')
     for (const p of points.slice(0, 5)) {
       lines.push(`• ${p}`)
     }
@@ -46,12 +43,10 @@ export function synthesizeFromWeb(question: string, snippets: WebSnippet[]): Web
 
   lines.push(
     '',
-    `I cross-checked ${snippets.length} intel hits across ${Object.keys(channels).length} scout channels. Want me to dig deeper? Add API scout keys in Settings, or ask a follow-up.`
+    `I cross-checked ${snippets.length} intel hits across ${Object.keys(channels).length} scout channel(s). Ask a follow-up if you want me to dig deeper.`
   )
 
-  const influence = buildInfluence(channels)
-
-  return { answer: lines.join('\n').trim(), influence }
+  return { answer: lines.join('\n').trim(), influence: buildInfluence(channels) }
 }
 
 function pickLead(snippets: WebSnippet[]): { intro: string; detail?: string; source: WebSnippet } {
@@ -115,12 +110,7 @@ function extractKeyPoints(
 }
 
 function detectTension(snippets: WebSnippet[]): string | null {
-  const news = snippets.filter((s) => s.channel === 'news')
-  const discussion = snippets.filter((s) => s.channel === 'discussion')
-  if (news.length >= 2 && discussion.length >= 1) {
-    return 'news and community takes may differ — I leaned on what repeated across the most sources.'
-  }
-  if (snippets.length >= 4) {
+  if (snippets.length >= 3) {
     return 'some sources emphasize different angles — I weighted what showed up most consistently.'
   }
   return null
@@ -160,11 +150,7 @@ function buildInfluence(channels: Partial<Record<WebChannel, number>>): Influenc
   for (const [ch, count] of Object.entries(channels) as [WebChannel, number][]) {
     const pct = Math.round((count / total) * 55)
     if (pct > 0) {
-      entries.push({
-        source: 'web',
-        label: CHANNEL_LABELS[ch],
-        percent: pct
-      })
+      entries.push({ source: 'web', label: CHANNEL_LABELS[ch], percent: pct })
     }
   }
 
@@ -175,7 +161,6 @@ function buildInfluence(channels: Partial<Record<WebChannel, number>>): Influenc
     percent: Math.max(25, 100 - used)
   })
 
-  // Normalize to 100
   const sum = entries.reduce((a, e) => a + e.percent, 0)
   if (sum !== 100) {
     let running = 0

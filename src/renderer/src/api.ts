@@ -7,6 +7,7 @@ import type {
   ProviderStatus,
   StoredQuestion
 } from '../../shared/types'
+import { digestInBrowser } from './web/browser-digest'
 
 const isElectron = (): boolean =>
   typeof window !== 'undefined' && typeof window.mvp !== 'undefined'
@@ -18,22 +19,8 @@ export async function digestChat(history: ChatMessage[]): Promise<DigestResponse
     [...history].reverse().find((m) => m.role === 'user')?.content?.trim() ?? ''
   if (!question) throw new Error('Ask me something first.')
 
-  const res = await fetch('/.netlify/functions/digest', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ question })
-  })
-
-  if (!res.ok) {
-    const err = (await res.json().catch(() => ({}))) as { error?: string }
-    const hint =
-      res.status === 404
-        ? ' — for local web dev run: npm run dev:web (or restart electron-vite dev)'
-        : ''
-    throw new Error((err.error ?? `Request failed (${res.status})`) + hint)
-  }
-
-  return res.json() as Promise<DigestResponse>
+  // Static hosting on pauloventura.org — scouts run in the browser, no server needed.
+  return digestInBrowser(question)
 }
 
 export async function runAgentChat(

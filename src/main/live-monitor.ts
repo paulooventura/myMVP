@@ -15,7 +15,7 @@ import {
 import { configuredProviders, getProvider } from './providers'
 import { normalizeInfluence, labelForSource } from './orchestrator'
 import { scoutWebWide } from './web/scout-all'
-import { synthesizeFromWeb } from './web/synthesize'
+import { synthesizeFromWeb } from '../shared/web/synthesize'
 
 let timer: ReturnType<typeof setInterval> | null = null
 let scanning = false

@@ -13,7 +13,7 @@ as [Mind and Venture](https://github.com/paulooventura/Mind-and-Venture)).
 
 | | URL |
 | --- | --- |
-| **Play in browser** | https://mymvp.netlify.app |
+| **Play in browser** | https://papaya-malabi-1e40d5.netlify.app |
 | **GitHub** | https://github.com/paulooventura/myMVP |
 | **Mind & Venture** (sibling project) | https://mind-and-venture.netlify.app |
 

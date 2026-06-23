@@ -1,7 +1,7 @@
 node_modules/
 dist/
 out/
-dist/
+deploy/
 .DS_Store
 *.log
 npm-debug.log*

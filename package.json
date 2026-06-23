@@ -13,6 +13,9 @@
     "dev:web": "vite --config vite.web.config.ts",
     "build": "electron-vite build",
     "build:web": "vite build --config vite.web.config.ts",
+    "build:site": "node scripts/build-pauloventura-site.mjs",
+    "build:site:wix": "node scripts/build-pauloventura-site.mjs --wix",
+    "deploy:wix": "node scripts/deploy-github-pages.mjs",
     "preview": "electron-vite preview",
     "start": "electron-vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json"
