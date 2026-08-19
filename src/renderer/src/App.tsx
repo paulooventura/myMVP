@@ -7,11 +7,13 @@ import type {
   Mode,
   ProviderResult,
   ProviderStatus,
+  ReliabilityReport,
   StoredQuestion,
   WebSnippet
 } from '../../shared/types'
 import { HistorySidebar } from './components/HistorySidebar'
 import { InfluenceChart } from './components/InfluenceChart'
+import { ReliabilityBadge } from './components/ReliabilityBadge'
 import { Settings } from './components/Settings'
 import {
   digestChat,
@@ -40,6 +42,7 @@ interface UIMessage {
   isLiveRevision?: boolean
   webSnippets?: WebSnippet[]
   webOnly?: boolean
+  reliability?: ReliabilityReport
 }
 
 const STARTERS = [
@@ -152,7 +155,8 @@ export default function App(): JSX.Element {
             influence: res.influence,
             questionId: res.questionId,
             webSnippets: res.webSnippets,
-            webOnly: res.webOnly
+            webOnly: res.webOnly,
+            reliability: res.reliability
           }
           return copy
         })
@@ -230,7 +234,7 @@ export default function App(): JSX.Element {
               <span className="mvp">MVP</span>
             </span>
           </div>
-          <span className="tagline">I GOT YOU.</span>
+          <span className="tagline">Logic &amp; precision</span>
         {isWebApp() && <span className="web-app-badge">Web</span>}
           <div className="header-spacer" />
           <div className="mode-toggle">
@@ -299,7 +303,7 @@ export default function App(): JSX.Element {
           {messages.length === 0 ? (
             <div className="welcome">
               <h1>
-                What can I knock out for you? <span className="hype">I GOT YOU.</span>
+                What would you like to know?
               </h1>
               <p>
                 {mode === 'digest'
@@ -367,10 +371,11 @@ function Message({ msg }: { msg: UIMessage }): JSX.Element {
           </div>
         ) : msg.content ? (
           <div className="bubble">
-            {msg.webOnly && <span className="web-only-badge">Web intel mode</span>}
+            {msg.webOnly && <span className="web-only-badge">Web scouts</span>}
             {msg.content}
           </div>
         ) : null}
+        {msg.reliability && <ReliabilityBadge report={msg.reliability} />}
         {msg.influence && msg.influence.length > 0 && (
           <InfluenceChart influence={msg.influence} />
         )}

@@ -1,0 +1,16 @@
+---
+description: myMVP answer ethos — blunt, honest, pure data
+alwaysApply: true
+---
+
+# myMVP answer ethos
+
+When building or changing myMVP answers (brain, scouts, synthesis, reliability):
+
+- Give the **most blunt, reasonable, honest** answer supported by data or computation.
+- **No gaslighting** — never imply the user asked something else; never cite unrelated sources as if they answer the question.
+- **No guessing** — if evidence is missing, say so plainly. Do not dress uncertainty as certainty.
+- **Pure data** — verified facts, math, coordinates, scout evidence. Reason only from what you can support.
+- Answer the **exact question** (year, place, subject). Never substitute a different question, year, or topic.
+
+Canonical source: `src/shared/principles.ts` (`CORE_RULE`, `MVP_PERSONA`).

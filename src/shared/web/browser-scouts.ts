@@ -1,21 +1,33 @@
 import type { WebSnippet } from '../types'
 import { CHANNEL_LABELS } from './constants'
+import { fetchDuckDuckGoHtml } from './duck-search'
+import { planScoutQueries } from './query-planner'
+import { filterWeakSnippets } from './relevance'
 
 /** Browser-safe scouts (CORS-friendly) — for pauloventura.org static hosting. */
 export async function scoutInBrowser(question: string): Promise<WebSnippet[]> {
-  const q = question.trim()
-  if (!q) return []
+  const queries = planScoutQueries(question)
+  const tasks: Promise<WebSnippet[]>[] = []
 
-  const [wiki, instant] = await Promise.all([scoutWikipedia(q), scoutDuckInstant(q)])
-  const out = [...wiki, ...instant]
-
-  // Extra Wikipedia pass with news-flavored query for fresher topics.
-  if (out.length < 4) {
-    const extra = await scoutWikipedia(`${q} 2025 2026`)
-    out.push(...extra)
+  for (const q of queries) {
+    tasks.push(scoutWikipedia(q))
+    tasks.push(scoutDuckInstant(q))
   }
 
-  return dedupe(out).slice(0, 12)
+  // Real web search — skip generic "local scene" suffix (adds noise).
+  tasks.push(scoutDuckHtmlSafe(question))
+
+  const batches = await Promise.all(tasks)
+  const merged = dedupe(batches.flat())
+  return filterWeakSnippets(question, merged).slice(0, 18)
+}
+
+async function scoutDuckHtmlSafe(query: string): Promise<WebSnippet[]> {
+  try {
+    return await fetchDuckDuckGoHtml(query, 6)
+  } catch {
+    return []
+  }
 }
 
 async function scoutWikipedia(question: string): Promise<WebSnippet[]> {
@@ -23,7 +35,7 @@ async function scoutWikipedia(question: string): Promise<WebSnippet[]> {
     action: 'query',
     list: 'search',
     srsearch: question,
-    srlimit: '3',
+    srlimit: '4',
     format: 'json',
     origin: '*'
   })
@@ -39,10 +51,13 @@ async function scoutWikipedia(question: string): Promise<WebSnippet[]> {
 
   for (const hit of hits.slice(0, 2)) {
     const summary = await fetchWikiSummary(hit.title)
+    const excerpt = summary || stripWikiHtml(hit.snippet)
+    if (/honorific nicknames in popular music/i.test(hit.title)) continue
+
     out.push({
       title: hit.title,
       url: `https://en.wikipedia.org/wiki/${encodeURIComponent(hit.title.replace(/ /g, '_'))}`,
-      excerpt: summary || stripWikiHtml(hit.snippet),
+      excerpt,
       channel: 'wiki',
       channelLabel: CHANNEL_LABELS.wiki
     })
@@ -78,7 +93,7 @@ async function scoutDuckInstant(question: string): Promise<WebSnippet[]> {
 
   const out: WebSnippet[] = []
   const abstract = (data.AbstractText ?? '').trim()
-  if (abstract) {
+  if (abstract && !/honorific nicknames/i.test(abstract)) {
     out.push({
       title: data.Heading || 'Instant answer',
       url: data.AbstractURL || 'https://duckduckgo.com/',
@@ -107,7 +122,7 @@ async function scoutDuckInstant(question: string): Promise<WebSnippet[]> {
         channelLabel: CHANNEL_LABELS.instant
       })
     }
-    if (out.length >= 4) break
+    if (out.length >= 5) break
   }
   return out
 }

@@ -7,16 +7,10 @@ import type {
   ProviderId,
   ProviderResult
 } from '../shared/types'
+import { assessScoutReliability } from '../shared/reliability'
+import { CORE_RULE, MVP_PERSONA, SCOUT_PERSONA } from '../shared/principles'
 import { configuredProviders, getProvider } from './providers'
 import { digestFromWeb } from './web-digest'
-
-const SCOUT_PERSONA = `You are a data scout for myMVP. Gather and report the best answer you can to the user's question — clear, correct, concise. Your output is raw intel for myMVP's brain, not the final word.`
-
-const MVP_PERSONA = `You are myMVP — THE brain. The user's enthusiastic, ultra-capable assistant with "I GOT YOU" energy: confident, warm, and decisive.
-
-You are not a router and you are not one of the scouts. YOU think. GPT, Gemini, and Claude are data scouts — they fed you intel. Their reports are inputs, not authority. You are free to agree with all of them, some of them, or none of them. Trust your own judgment above any scout.
-
-Deliver YOUR answer in YOUR voice. Lead with the answer, then the why. Be concise, never waffle. Never mention scouts, advisors, synthesis, or other models — the user is talking to myMVP, and this is simply your answer.`
 
 const SOURCE_LABELS: Record<InfluenceSource, string> = {
   openai: 'GPT scout',
@@ -30,6 +24,8 @@ let penCursor = 0
 
 interface VerdictJson {
   answer: string
+  confidence?: string
+  caveats?: string[]
   influence: { provider: string; percent: number }[]
 }
 
@@ -41,7 +37,7 @@ export async function digest(
     [...history].reverse().find((m) => m.role === 'user')?.content?.trim() ?? ''
 
   if (!lastUser) {
-    return emptyResponse('Ask me something — I GOT YOU.')
+    return emptyResponse('Ask me something.')
   }
 
   const providers = configuredProviders(settings)
@@ -103,7 +99,8 @@ export async function digest(
       penEngine: fastest.provider,
       advisorsConsulted: good.length,
       results,
-      influence: fallbackInfluence(good, true)
+      influence: fallbackInfluence(good, true),
+      reliability: assessScoutReliability(good)
     }
   }
 
@@ -124,11 +121,15 @@ Your scouts returned intel. Here are their field reports:
 
 ${panel}
 
-Now give the user YOUR answer as myMVP — the brain. Weigh the scout intel, keep what's right, toss what's wrong or redundant, and add anything they all missed. Own it.
+Now answer with logic and precision. ${CORE_RULE}
+
+Structure your "answer" field as: direct answer to the exact question → brief reasoning from scout evidence → limits if any.
 
 Respond with ONLY valid JSON (no markdown fences, no commentary):
 {
   "answer": "your final answer in myMVP voice",
+  "confidence": "high|medium|low|insufficient",
+  "caveats": ["optional list of limitations or disagreements"],
   "influence": [
     {"provider": "openai", "percent": 25},
     {"provider": "gemini", "percent": 20},
@@ -136,6 +137,11 @@ Respond with ONLY valid JSON (no markdown fences, no commentary):
     {"provider": "mvp", "percent": 40}
   ]
 }
+
+Rules for confidence:
+- "high" ONLY if scouts largely agree and evidence is solid.
+- "insufficient" if scouts conflict, failed, or lack facts for the question.
+- caveats MUST mention scout disagreement or missing info when applicable.
 
 Rules for influence:
 - Include ONLY scouts that actually contributed (${scoutIds}) plus "mvp" for myMVP's own reasoning as the brain.
@@ -149,12 +155,14 @@ Rules for influence:
     const raw = await pen.complete(verdictPrompt, 0.4)
     const parsed = parseVerdictJson(raw)
     if (parsed) {
+      const reliability = assessScoutReliability(good, parsed.confidence, parsed.caveats)
       return {
         answer: parsed.answer,
         penEngine: pen.id as ProviderId,
         advisorsConsulted: good.length,
         results,
-        influence: normalizeInfluence(parsed.influence, good)
+        influence: normalizeInfluence(parsed.influence, good),
+        reliability
       }
     }
     // JSON parse failed — use raw text as answer.
@@ -163,7 +171,8 @@ Rules for influence:
       penEngine: pen.id as ProviderId,
       advisorsConsulted: good.length,
       results,
-      influence: fallbackInfluence(good, false)
+      influence: fallbackInfluence(good, false),
+      reliability: assessScoutReliability(good)
     }
   } catch {
     const fastest = [...good].sort((a, b) => a.ms - b.ms)[0]
@@ -172,7 +181,8 @@ Rules for influence:
       penEngine: fastest.provider,
       advisorsConsulted: good.length,
       results,
-      influence: fallbackInfluence(good, true)
+      influence: fallbackInfluence(good, true),
+      reliability: assessScoutReliability(good)
     }
   }
 }

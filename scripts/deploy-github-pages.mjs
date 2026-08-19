@@ -9,6 +9,7 @@ import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+const NO_CNAME = process.argv.includes('--no-cname') || process.env.PAGES_NO_CNAME === '1'
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT = resolve(__dirname, '..')
 const WIX = resolve(ROOT, 'deploy', 'wix')
@@ -54,6 +55,15 @@ function pushGhPages(repo, srcDir) {
     git(tmp, 'init')
     git(tmp, 'checkout', '-b', 'gh-pages')
     cpSync(srcDir, tmp, { recursive: true })
+    // CNAME in repo forces custom domain; only include when Wix DNS is ready.
+    if (NO_CNAME) {
+      try {
+        rmSync(join(tmp, 'CNAME'))
+      } catch {
+        /* no CNAME */
+      }
+    }
+    writeFileSync(join(tmp, '.nojekyll'), '')
     git(tmp, 'add', '-A')
     git(tmp, 'commit', '-m', 'Deploy static site for pauloventura.org subdomain')
     git(tmp, 'branch', '-M', 'gh-pages')
@@ -65,31 +75,45 @@ function pushGhPages(repo, srcDir) {
 }
 
 function enablePages(repo, cname) {
+  const useCname = !NO_CNAME
   const payload = {
     build_type: 'legacy',
     source: { branch: 'gh-pages', path: '/' },
-    cname
+    ...(useCname ? { cname } : { cname: null })
+    // Omit https_enforced until GitHub has issued the cert (avoids 422/404 on first deploy).
   }
-  const r = spawnSync(
-    'gh',
-    ['api', '-X', 'POST', `repos/${OWNER}/${repo}/pages`, '--input', '-'],
-    {
-      input: JSON.stringify(payload),
+  const input = JSON.stringify(payload)
+  let r = spawnSync('gh', ['api', '-X', 'POST', `repos/${OWNER}/${repo}/pages`, '--input', '-'], {
+    input,
+    encoding: 'utf8',
+    shell: false
+  })
+  if (r.status !== 0) {
+    r = spawnSync('gh', ['api', '-X', 'PUT', `repos/${OWNER}/${repo}/pages`, '--input', '-'], {
+      input,
       encoding: 'utf8',
       shell: false
-    }
-  )
+    })
+  }
   if (r.status !== 0) {
-    spawnSync(
-      'gh',
-      ['api', '-X', 'PUT', `repos/${OWNER}/${repo}/pages`, '--input', '-'],
-      {
-        input: JSON.stringify(payload),
+    console.warn(`[warn] Pages API for ${repo}: ${(r.stderr || r.stdout || '').trim()}`)
+    // CNAME file on gh-pages still registers the domain; retry PUT without https fields.
+    if (useCname) {
+      spawnSync('gh', ['api', '-X', 'PUT', `repos/${OWNER}/${repo}/pages`, '--input', '-'], {
+        input: JSON.stringify({
+          build_type: 'legacy',
+          source: { branch: 'gh-pages', path: '/' },
+          cname
+        }),
         encoding: 'utf8',
         shell: false
-      }
-    )
+      })
+    }
   }
+  spawnSync('gh', ['api', '-X', 'POST', `repos/${OWNER}/${repo}/pages/builds`], {
+    encoding: 'utf8',
+    shell: false
+  })
 }
 
 function pagesUrl(repo) {
@@ -130,32 +154,33 @@ for (const site of SITES) {
   console.log('Pushing gh-pages branch...')
   pushGhPages(site.name, src)
 
-  console.log('Enabling GitHub Pages + custom domain...')
+  console.log(NO_CNAME ? 'Enabling GitHub Pages...' : 'Enabling GitHub Pages + custom domain...')
   enablePages(site.name, site.cname)
 
-  const url = pagesUrl(site.name)
+  const url = NO_CNAME ? `https://${OWNER}.github.io/${site.name}/` : pagesUrl(site.name)
   results.push({ ...site, url })
-  console.log(`[ok] ${site.cname} → GitHub Pages configured`)
+  console.log(`[ok] ${url}`)
 }
 
 const dnsPath = join(WIX, 'WIX-DNS-RECORDS.txt')
-const dns = `Add these CNAME records in Wix (Domains → pauloventura.org → Manage DNS Records).
-Your Wix homepage is NOT changed — only new subdomains.
+const liveUrls = results.map((r) => `  ${r.url}`).join('\n')
+const dns = NO_CNAME
+  ? `LIVE NOW — add these as external links on your Wix site (homepage unchanged):
+${liveUrls}
 
-Host name          Points to
-mymvp              paulooventura.github.io
-mindandventure     paulooventura.github.io
-delphi             paulooventura.github.io
-
-After DNS propagates (5–60 min), these URLs go live:
+Optional pretty URLs (after Wix DNS):
+  Add CNAME records in Wix → Domains → pauloventura.org → Manage DNS:
+    mymvp          → paulooventura.github.io
+    mindandventure → paulooventura.github.io
+    delphi         → paulooventura.github.io
+  Then run: npm run deploy:wix:subdomains
+`
+  : `Subdomains configured on GitHub Pages:
   https://mymvp.pauloventura.org/
   https://mindandventure.pauloventura.org/
   https://delphi.pauloventura.org/
 
-GitHub Pages (works immediately while DNS propagates):
-  ${results.map((r) => `  ${r.name}: ${r.url}`).join('\n  ')}
-
-On your Wix site: add external links to the subdomain URLs above.
+Ensure Wix DNS CNAME records point to paulooventura.github.io (see above).
 `
 writeFileSync(dnsPath, dns)
 

@@ -740,6 +740,87 @@ textarea:focus {
   margin-bottom: 8px;
 }
 
+.reliability-panel {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.03);
+  font-size: 12px;
+}
+
+.reliability-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.reliability-badge {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.reliability-badge.confidence-high {
+  background: rgba(46, 204, 113, 0.15);
+  color: #2ecc71;
+  border: 1px solid rgba(46, 204, 113, 0.4);
+}
+
+.reliability-badge.confidence-medium {
+  background: rgba(241, 196, 15, 0.12);
+  color: #f1c40f;
+  border: 1px solid rgba(241, 196, 15, 0.35);
+}
+
+.reliability-badge.confidence-low,
+.reliability-badge.confidence-insufficient {
+  background: rgba(231, 76, 60, 0.12);
+  color: #e74c3c;
+  border: 1px solid rgba(231, 76, 60, 0.35);
+}
+
+.reliability-title {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.reliability-meta {
+  color: var(--text-dim);
+  font-size: 11px;
+}
+
+.reliability-caveats {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  color: var(--text-dim);
+  line-height: 1.45;
+}
+
+.reliability-grounded {
+  margin-top: 8px;
+}
+
+.reliability-grounded summary {
+  cursor: pointer;
+  color: var(--accent-2);
+  font-weight: 600;
+}
+
+.reliability-grounded ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  line-height: 1.45;
+}
+
+.reliability-grounded a {
+  color: var(--accent-2);
+}
+
 .web-intel .web-channel {
   margin-top: 10px;
 }

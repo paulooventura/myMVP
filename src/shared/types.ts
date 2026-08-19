@@ -29,6 +29,23 @@ export interface InfluenceEntry {
   percent: number
 }
 
+export type ConfidenceLevel = 'high' | 'medium' | 'low' | 'insufficient'
+
+export interface GroundedClaim {
+  text: string
+  sourceUrls: string[]
+  sourceLabels: string[]
+}
+
+/** Evidence-based trust assessment — fights overconfident / "gaslighting" answers. */
+export interface ReliabilityReport {
+  confidence: ConfidenceLevel
+  score: number
+  caveats: string[]
+  corroboratingChannels: number
+  groundedClaims: GroundedClaim[]
+}
+
 /** The final verdict myMVP renders for "digest" mode. */
 export interface DigestResponse {
   answer: string
@@ -43,6 +60,8 @@ export interface DigestResponse {
   webSnippets?: WebSnippet[]
   /** True when answer came from web scouts only (no API scouts). */
   webOnly?: boolean
+  /** Calibrated trust — always populated in digest mode. */
+  reliability?: ReliabilityReport
 }
 
 /** Status of a configured provider (does it have a key?). */
